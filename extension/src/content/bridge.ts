@@ -30,14 +30,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     message.type === "PEDAL_TOGGLE_RECORD" ||
     message.type === "PEDAL_GO_LIVE" ||
     message.type === "PEDAL_START_RECORD" ||
-    message.type === "PEDAL_STOP_RECORD"
+    message.type === "PEDAL_STOP_RECORD" ||
+    message.type === "PEDAL_PLAY_SAVED_CLIP"
   ) {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
       if (event.data?.source !== "video-pedal-page") return;
       if (event.data?.type === "PEDAL_STATE_CHANGED") {
         window.removeEventListener("message", handler);
-        sendResponse({ state: event.data.payload?.state });
+        sendResponse(event.data.payload);
       }
     };
     window.addEventListener("message", handler);
@@ -46,5 +47,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ state: null });
     }, 3000);
     return true; // Keep channel open for async response
+  }
+
+  if (message.type === "PEDAL_EXPORT_CURRENT_LOOP") {
+    const handler = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      if (event.data?.source !== "video-pedal-page") return;
+      if (event.data?.type === "PEDAL_EXPORT_CURRENT_LOOP_RESULT") {
+        window.removeEventListener("message", handler);
+        sendResponse(event.data.payload);
+      }
+    };
+    window.addEventListener("message", handler);
+    setTimeout(() => {
+      window.removeEventListener("message", handler);
+      sendResponse(null);
+    }, 4000);
+    return true;
   }
 });

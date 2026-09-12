@@ -2,7 +2,23 @@ export type PedalState =
   | "LIVE"
   | "RECORDING"
   | "LOOPING"
+  | "REPLAYING"
   | "DISSOLVING_TO_LIVE";
+
+export interface SavedVideoClip {
+  id: string;
+  title: string;
+  videoDataUrl: string; // base64 webm data url for cross-boundary transport & storage
+  durationSeconds: number;
+  thumbnailDataUrl: string;
+  createdAt: number;
+}
+
+export interface ExportedLoopData {
+  videoDataUrl: string;
+  durationSeconds: number;
+  thumbnailDataUrl: string;
+}
 
 export interface PedalSettings {
   maxRecordingSeconds: number;

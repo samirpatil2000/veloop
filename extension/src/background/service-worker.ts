@@ -95,7 +95,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     message?.type === "PEDAL_START_RECORD" ||
     message?.type === "PEDAL_STOP_RECORD" ||
     message?.type === "PEDAL_GO_LIVE" ||
-    message?.type === "PEDAL_GET_STATE"
+    message?.type === "PEDAL_GET_STATE" ||
+    message?.type === "PEDAL_PLAY_SAVED_CLIP" ||
+    message?.type === "PEDAL_EXPORT_CURRENT_LOOP"
   ) {
     sendToTargetTab(message).then((res) => sendResponse(res));
     return true;
@@ -109,6 +111,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (st === "LOOPING") {
       chrome.action.setBadgeText({ text: "LOOP" });
       chrome.action.setBadgeBackgroundColor({ color: "#38a169" });
+    } else if (st === "REPLAYING") {
+      chrome.action.setBadgeText({ text: "PLAY" });
+      chrome.action.setBadgeBackgroundColor({ color: "#3182ce" });
     } else {
       chrome.action.setBadgeText({ text: "" });
     }

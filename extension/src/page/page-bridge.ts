@@ -4,7 +4,7 @@
   }
   (window as unknown as { __videoPedalInstalled: boolean }).__videoPedalInstalled = true;
 
-  type PedalState = "LIVE" | "RECORDING" | "LOOPING";
+  type PedalState = "LIVE" | "RECORDING" | "LOOPING" | "REPLAYING";
 
   let currentState: PedalState = "LIVE";
   let maxRecordingSeconds = 30;
@@ -18,7 +18,22 @@
   let loopPlaybackIndex = 0;
   let isRecording = false;
 
-  // Dissolve state (when returning to LIVE from LOOPING)
+  // Replay video & preset state
+  let replayVideo: HTMLVideoElement | null = null;
+  let activePresetTitle: string | null = null;
+  let activePresetId: string | null = null;
+
+  // MediaRecorder for compressed WebM loops
+  let mediaRecorder: MediaRecorder | null = null;
+  let recordedChunks: Blob[] = [];
+  let recordStartTime = 0;
+  let lastExportedLoop: {
+    videoDataUrl: string;
+    durationSeconds: number;
+    thumbnailDataUrl: string;
+  } | null = null;
+
+  // Dissolve state (when returning to LIVE from LOOPING or REPLAYING)
   let dissolveFramesRemaining = 0;
   let totalDissolveFrames = 0;
 
@@ -38,7 +53,7 @@
   let isIntentionalCameraStandby = false;
   let isAcquiringCamera = false;
 
-  function broadcastState(state: PedalState) {
+  function broadcastState(state: PedalState, extra?: Record<string, unknown>) {
     currentState = state;
     window.postMessage(
       {
@@ -47,6 +62,10 @@
         payload: {
           state,
           framesCount: recordedBitmaps.length,
+          hasSavedLoopAvailable: !!lastExportedLoop,
+          activePresetTitle,
+          activePresetId,
+          ...extra,
         },
       },
       "*",
@@ -199,13 +218,46 @@
       }
     }
 
-    // Clear previous recordings
+    // Clear previous recordings & active replay
     for (const b of recordedBitmaps) b.close();
     for (const b of recordBuffer) b.close();
     recordedBitmaps = [];
     recordBuffer = [];
     loopPlaybackIndex = 0;
+    if (replayVideo) {
+      replayVideo.pause();
+      replayVideo.src = "";
+    }
+    activePresetTitle = null;
+    activePresetId = null;
+
     isRecording = true;
+    lastExportedLoop = null;
+    recordedChunks = [];
+    recordStartTime = Date.now();
+
+    if (currentRawStream) {
+      try {
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+          ? "video/webm;codecs=vp8"
+          : MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "";
+        mediaRecorder = new MediaRecorder(
+          currentRawStream,
+          mimeType ? { mimeType } : undefined,
+        );
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+        mediaRecorder.start(100);
+      } catch (err) {
+        console.warn("[Video Pedal] MediaRecorder failed to start:", err);
+      }
+    }
+
     broadcastState("RECORDING");
     console.log("[Video Pedal] REC: Recording camera frames");
   }
@@ -213,6 +265,49 @@
   function stopRecordingAndLoop(): void {
     if (!isRecording) return;
     isRecording = false;
+
+    // Finalize MediaRecorder to produce a WebM loop for saving
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      const durationSeconds = Math.max(0.1, (Date.now() - recordStartTime) / 1000);
+      mediaRecorder.onstop = () => {
+        if (recordedChunks.length > 0) {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const thumbCanvas = document.createElement("canvas");
+          thumbCanvas.width = 160;
+          thumbCanvas.height = 90;
+          const thumbCtx = thumbCanvas.getContext("2d");
+          if (thumbCtx && recordedBitmaps.length > 0) {
+            thumbCtx.drawImage(recordedBitmaps[0], 0, 0, 160, 90);
+          } else if (thumbCtx && compositorCanvas) {
+            thumbCtx.drawImage(compositorCanvas, 0, 0, 160, 90);
+          }
+          const thumbnailDataUrl = thumbCanvas.toDataURL("image/jpeg", 0.7);
+
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            lastExportedLoop = {
+              videoDataUrl: reader.result as string,
+              durationSeconds: Math.round(durationSeconds * 10) / 10,
+              thumbnailDataUrl,
+            };
+            window.postMessage(
+              {
+                source: "video-pedal-page",
+                type: "PEDAL_LOOP_READY_TO_SAVE",
+                payload: lastExportedLoop,
+              },
+              "*",
+            );
+          };
+          reader.readAsDataURL(blob);
+        }
+      };
+      try {
+        mediaRecorder.stop();
+      } catch {
+        // ignore
+      }
+    }
 
     const minFrames = Math.max(1, Math.floor(minRecordingSeconds * fps));
     if (recordBuffer.length >= minFrames) {
@@ -240,6 +335,59 @@
     }
   }
 
+  async function playSavedClip(clip: {
+    id: string;
+    title: string;
+    videoDataUrl: string;
+    durationSeconds?: number;
+  }): Promise<void> {
+    dissolveFramesRemaining = 0;
+    isRecording = false;
+
+    // Clear bitmap loops
+    for (const b of recordedBitmaps) b.close();
+    for (const b of recordBuffer) b.close();
+    recordedBitmaps = [];
+    recordBuffer = [];
+
+    if (!replayVideo) {
+      replayVideo = document.createElement("video");
+      replayVideo.muted = true;
+      replayVideo.playsInline = true;
+      replayVideo.autoplay = true;
+      replayVideo.loop = true;
+      replayVideo.style.display = "none";
+      (document.body || document.documentElement).appendChild(replayVideo);
+    }
+
+    replayVideo.src = clip.videoDataUrl;
+    replayVideo.currentTime = 0;
+
+    await new Promise<void>((resolve) => {
+      if (!replayVideo) return resolve();
+      if (replayVideo.readyState >= 2) return resolve();
+      replayVideo.onloadeddata = () => resolve();
+      setTimeout(resolve, 1000);
+    });
+
+    try {
+      await replayVideo.play();
+    } catch (e) {
+      console.warn("[Video Pedal] Error playing replayVideo:", e);
+    }
+
+    activePresetId = clip.id;
+    activePresetTitle = clip.title;
+    currentState = "REPLAYING";
+    broadcastState("REPLAYING", {
+      activePresetId: clip.id,
+      activePresetTitle: clip.title,
+    });
+
+    console.log(`[Video Pedal] REPLAYING: Preset "${clip.title}"`);
+    releaseHardwareCamera();
+  }
+
   async function goLive(): Promise<void> {
     if (currentState === "LIVE") return;
 
@@ -252,22 +400,25 @@
       return;
     }
 
-    if (currentState === "LOOPING") {
+    if (currentState === "LOOPING" || currentState === "REPLAYING") {
       if (isAcquiringCamera) return;
 
-      // Re-acquire camera hardware while loop continues running seamlessly
+      // Re-acquire camera hardware while loop/preset continues running seamlessly
       const ok = await acquireHardwareCamera();
       if (!ok) {
         console.error("[Video Pedal] Could not re-acquire camera to return live");
         return;
       }
 
-      if (crossfadeSeconds > 0 && recordedBitmaps.length > 0) {
+      if (
+        crossfadeSeconds > 0 &&
+        (recordedBitmaps.length > 0 || (replayVideo && replayVideo.readyState >= 2))
+      ) {
         // Start dissolve transition over crossfade duration
         totalDissolveFrames = Math.max(1, Math.floor(crossfadeSeconds * fps));
         dissolveFramesRemaining = totalDissolveFrames;
         console.log(
-          `[Video Pedal] Dissolving loop into live feed over ${crossfadeSeconds}s (${totalDissolveFrames} frames)`,
+          `[Video Pedal] Dissolving into live feed over ${crossfadeSeconds}s (${totalDissolveFrames} frames)`,
         );
         return;
       }
@@ -284,6 +435,12 @@
     recordedBitmaps = [];
     recordBuffer = [];
     loopPlaybackIndex = 0;
+    if (replayVideo) {
+      replayVideo.pause();
+      replayVideo.src = "";
+    }
+    activePresetTitle = null;
+    activePresetId = null;
     broadcastState("LIVE");
     console.log("[Video Pedal] LIVE: Stream is live");
   }
@@ -355,6 +512,17 @@
       void goLive();
     } else if (type === "PEDAL_GET_STATE") {
       broadcastState(currentState);
+    } else if (type === "PEDAL_PLAY_SAVED_CLIP" && payload) {
+      void playSavedClip(payload);
+    } else if (type === "PEDAL_EXPORT_CURRENT_LOOP") {
+      window.postMessage(
+        {
+          source: "video-pedal-page",
+          type: "PEDAL_EXPORT_CURRENT_LOOP_RESULT",
+          payload: lastExportedLoop,
+        },
+        "*",
+      );
     } else if (type === "PEDAL_UPDATE_SETTINGS" && payload) {
       if (payload.maxRecordingSeconds) maxRecordingSeconds = payload.maxRecordingSeconds;
       if (payload.minRecordingSeconds) minRecordingSeconds = payload.minRecordingSeconds;
@@ -488,13 +656,17 @@
       const h = compositorCanvas.height;
 
       // Check if we are dissolving back to LIVE
-      if (dissolveFramesRemaining > 0 && recordedBitmaps.length > 0) {
-        // Render loop frame
-        const frame = recordedBitmaps[loopPlaybackIndex];
-        if (frame) {
+      if (dissolveFramesRemaining > 0) {
+        if (currentState === "REPLAYING" && replayVideo && replayVideo.readyState >= 2) {
           compositorCtx.globalAlpha = 1.0;
-          compositorCtx.drawImage(frame, 0, 0, w, h);
-          loopPlaybackIndex = (loopPlaybackIndex + 1) % recordedBitmaps.length;
+          compositorCtx.drawImage(replayVideo, 0, 0, w, h);
+        } else if (recordedBitmaps.length > 0) {
+          const frame = recordedBitmaps[loopPlaybackIndex];
+          if (frame) {
+            compositorCtx.globalAlpha = 1.0;
+            compositorCtx.drawImage(frame, 0, 0, w, h);
+            loopPlaybackIndex = (loopPlaybackIndex + 1) % recordedBitmaps.length;
+          }
         }
 
         // Dissolve live frame on top
@@ -512,7 +684,12 @@
         return;
       }
 
-      if (currentState === "LOOPING" && recordedBitmaps.length > 0) {
+      if (currentState === "REPLAYING") {
+        if (replayVideo && replayVideo.readyState >= 2) {
+          compositorCtx.globalAlpha = 1.0;
+          compositorCtx.drawImage(replayVideo, 0, 0, w, h);
+        }
+      } else if (currentState === "LOOPING" && recordedBitmaps.length > 0) {
         const n = recordedBitmaps.length;
         const seamK = Math.min(Math.floor(crossfadeSeconds * fps), Math.floor(n / 2));
 

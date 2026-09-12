@@ -15,11 +15,30 @@
 
       <section class="hero">
         <div class="state" id="state">LIVE</div>
-        <div class="hint">Hold your pedal key to record</div>
+        <div class="hint" id="hint">Hold Right Alt to record</div>
       </section>
 
       <button id="record">Start recording</button>
       <button id="live" class="secondary">Go live</button>
+
+      <!-- Save active loop section -->
+      <section id="saveSection" class="save-section hidden">
+        <div class="save-label">Save Current Loop</div>
+        <div class="save-row">
+          <input id="presetTitleInput" type="text" placeholder="Preset name (e.g. Nodding)" maxlength="32" />
+          <button id="savePresetBtn">Save</button>
+        </div>
+      </section>
+
+      <!-- Soundboard presets section -->
+      <section class="presets-section">
+        <div class="presets-header">
+          <span>Presets Soundboard</span>
+          <span id="presetsCount" class="count-badge">0</span>
+        </div>
+        <div id="presetsList" class="presets-list"></div>
+        <div id="noPresetsMsg" class="empty-msg">No saved presets yet.<br>Record a loop with your pedal to save it here.</div>
+      </section>
 
       <footer>
         <a href="#" id="settings">Settings</a>
