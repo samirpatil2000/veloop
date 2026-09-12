@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Video Pedal Settings</title>
+    <style>
+      body { max-width: 680px; margin: 40px auto; padding: 0 20px; font: 15px/1.5 system-ui; }
+      label { display: block; margin: 18px 0; }
+      input { display: block; margin-top: 6px; padding: 8px; width: 180px; }
+      button { padding: 10px 16px; }
+      .note { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Video Pedal</h1>
+    <p class="note">These settings are local. Browser/site support is still experimental.</p>
+
+    <label>Maximum recording (seconds)
+      <input id="maxRecordingSeconds" type="number" min="1" max="300" step="1">
+    </label>
+
+    <label>Minimum recording (seconds)
+      <input id="minRecordingSeconds" type="number" min="0.1" max="30" step="0.1">
+    </label>
+
+    <label>Crossfade (seconds)
+      <input id="crossfadeSeconds" type="number" min="0" max="5" step="0.1">
+    </label>
+
+    <label>Overlay opacity
+      <input id="overlayOpacity" type="number" min="0" max="1" step="0.05">
+    </label>
+
+    <button id="save">Save</button>
+    <span id="saved"></span>
+
+    <script src="options.js"></script>
+  </body>
+</html>

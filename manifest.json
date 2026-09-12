@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Video Pedal",
+  "version": "0.1.0",
+  "description": "A browser-native video loop pedal for supported WebRTC sites.",
+  "permissions": [
+    "storage",
+    "offscreen",
+    "scripting",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Video Pedal",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "video-pedal-record": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+1",
+        "mac": "Command+Shift+1"
+      },
+      "description": "Start/stop Video Pedal recording"
+    },
+    "video-pedal-live": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+2",
+        "mac": "Command+Shift+2"
+      },
+      "description": "Return Video Pedal to live"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["page-bridge.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
