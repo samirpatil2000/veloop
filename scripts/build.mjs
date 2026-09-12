@@ -1,5 +1,6 @@
 import { cp, mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { execSync } from "node:child_process";
 import { build } from "esbuild";
 
 const out = "dist";
@@ -8,6 +9,7 @@ await mkdir(out, { recursive: true });
 
 await cp("manifest.json", join(out, "manifest.json"));
 await cp("extension/src/offscreen/offscreen.html", join(out, "offscreen.html"));
+await cp("extension/icons", join(out, "icons"), { recursive: true });
 
 const bundles = {
   "extension/src/background/service-worker.ts": "background.js",
@@ -36,4 +38,14 @@ for (const [source, target] of Object.entries(bundles)) {
   } else {
     await cp(source, targetPath);
   }
+}
+
+// Package clean zip for Chrome Web Store Developer Console upload
+const zipPath = join(process.cwd(), "veloop.zip");
+try {
+  await rm(zipPath, { force: true });
+  execSync("zip -r ../veloop.zip . -x '*.DS_Store' -x '*.map'", { cwd: out, stdio: "pipe" });
+  console.log("Packed store zip: veloop.zip");
+} catch (err) {
+  console.warn("Could not create zip package:", err);
 }

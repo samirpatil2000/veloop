@@ -1,21 +1,33 @@
 {
   "manifest_version": 3,
-  "name": "Video Pedal",
-  "version": "0.1.0",
-  "description": "A browser-native video loop pedal for supported WebRTC sites.",
+  "name": "Veloop",
+  "version": "0.1.1",
+  "description": "Instant video soundboard & loop pedal for Google Meet, Zoom, and WebRTC calls.",
   "permissions": [
     "storage",
     "offscreen",
     "scripting",
     "activeTab"
   ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
-    "default_title": "Video Pedal",
-    "default_popup": "popup.html"
+    "default_title": "Veloop",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "options_page": "options.html",
   "commands": {
@@ -24,25 +36,41 @@
         "default": "Ctrl+Shift+1",
         "mac": "Command+Shift+1"
       },
-      "description": "Start/stop Video Pedal recording"
+      "description": "Start/stop Veloop recording"
     },
     "video-pedal-live": {
       "suggested_key": {
         "default": "Ctrl+Shift+2",
         "mac": "Command+Shift+2"
       },
-      "description": "Return Video Pedal to live"
+      "description": "Return Veloop to live"
     }
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://meet.google.com/*",
+        "*://*.zoom.us/*",
+        "*://teams.microsoft.com/*",
+        "*://teams.live.com/*",
+        "*://*.webex.com/*",
+        "*://discord.com/*",
+        "*://whereby.com/*"
+      ],
       "js": ["page-bridge.js"],
       "world": "MAIN",
       "run_at": "document_start"
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://meet.google.com/*",
+        "*://*.zoom.us/*",
+        "*://teams.microsoft.com/*",
+        "*://teams.live.com/*",
+        "*://*.webex.com/*",
+        "*://discord.com/*",
+        "*://whereby.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -50,7 +78,15 @@
   "web_accessible_resources": [
     {
       "resources": ["page-bridge.js"],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "*://meet.google.com/*",
+        "*://*.zoom.us/*",
+        "*://teams.microsoft.com/*",
+        "*://teams.live.com/*",
+        "*://*.webex.com/*",
+        "*://discord.com/*",
+        "*://whereby.com/*"
+      ]
     }
   ]
 }

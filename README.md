@@ -1,6 +1,6 @@
-# Video Pedal Extension
+# Veloop
 
-Browser-native implementation of the `video-pedal` concept for Chrome.
+Instant video soundboard & loop pedal for Chrome (Google Meet, Zoom, and WebRTC calls).
 
 ## Status
 
