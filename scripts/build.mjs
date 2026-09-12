@@ -1,5 +1,6 @@
 import { cp, mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { build } from "esbuild";
 
 const out = "dist";
 await rm(out, { recursive: true, force: true });
@@ -24,14 +25,12 @@ for (const [source, target] of Object.entries(bundles)) {
   const targetPath = join(out, target);
   await mkdir(dirname(targetPath), { recursive: true });
   if (source.endsWith(".ts")) {
-    // The build script is intentionally simple for the spike.
-    // Production build will use a real bundler and separate chunks.
-    const { transform } = await import("esbuild");
-    await transform(await (await import("node:fs/promises")).readFile(source, "utf8"), {
-      loader: "ts",
+    await build({
+      entryPoints: [source],
+      outfile: targetPath,
+      bundle: true,
       format: "esm",
       target: "es2022",
-      outfile: targetPath
     });
   } else {
     await cp(source, targetPath);
