@@ -8,7 +8,7 @@
 
   let currentState: PedalState = "LIVE";
   let maxRecordingSeconds = 30;
-  let minRecordingSeconds = 0.8;
+  let minRecordingSeconds = 0.3;
   let crossfadeSeconds = 0.5;
   let fps = 30;
 
@@ -29,6 +29,15 @@
   let animFrameId: number | null = null;
   let lastFrameTime = 0;
 
+  // Hardware camera management
+  const allActiveVideoTracks = new Set<MediaStreamTrack>();
+  let savedConstraints: MediaStreamConstraints | undefined = undefined;
+  let currentRawStream: MediaStream | null = null;
+  let currentRawVideoTrack: MediaStreamTrack | null = null;
+  let syntheticVideoTrack: MediaStreamTrack | null = null;
+  let isIntentionalCameraStandby = false;
+  let isAcquiringCamera = false;
+
   function broadcastState(state: PedalState) {
     currentState = state;
     window.postMessage(
@@ -44,9 +53,151 @@
     );
   }
 
-  function startRecording() {
+  function releaseHardwareCamera(): void {
+    isIntentionalCameraStandby = true;
+
+    for (const track of allActiveVideoTracks) {
+      try {
+        track.stop();
+        track.enabled = false;
+      } catch {
+        // ignore
+      }
+    }
+    allActiveVideoTracks.clear();
+
+    if (currentRawVideoTrack) {
+      try {
+        currentRawVideoTrack.stop();
+        currentRawVideoTrack.enabled = false;
+      } catch {
+        // ignore
+      }
+      currentRawVideoTrack = null;
+    }
+
+    if (currentRawStream) {
+      for (const t of currentRawStream.getVideoTracks()) {
+        try {
+          t.stop();
+          t.enabled = false;
+        } catch {
+          // ignore
+        }
+      }
+      currentRawStream = null;
+    }
+
+    if (liveVideo) {
+      liveVideo.pause();
+      liveVideo.srcObject = null;
+      liveVideo.removeAttribute("src");
+      liveVideo.load();
+      if (liveVideo.parentNode) {
+        liveVideo.parentNode.removeChild(liveVideo);
+      }
+      liveVideo = null;
+    }
+
+    console.log("[Video Pedal] Hardware camera completely released and detached (LED should be OFF)");
+  }
+
+  async function acquireHardwareCamera(): Promise<boolean> {
+    if (isAcquiringCamera) return false;
+    if (
+      currentRawVideoTrack &&
+      currentRawVideoTrack.readyState === "live" &&
+      liveVideo &&
+      liveVideo.readyState >= 2
+    ) {
+      return true;
+    }
+
+    if (!originalGetUserMedia) return false;
+
+    isAcquiringCamera = true;
+    try {
+      const videoConstraints = savedConstraints?.video ?? true;
+      const stream = await originalGetUserMedia({
+        video: videoConstraints,
+        audio: false,
+      });
+
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length === 0) {
+        return false;
+      }
+
+      currentRawStream = stream;
+      currentRawVideoTrack = videoTracks[0];
+      for (const t of videoTracks) {
+        allActiveVideoTracks.add(t);
+      }
+      isIntentionalCameraStandby = false;
+
+      currentRawVideoTrack.addEventListener("ended", () => {
+        if (isIntentionalCameraStandby) return;
+        syntheticVideoTrack?.stop();
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+      });
+
+      if (!liveVideo) {
+        liveVideo = document.createElement("video");
+        liveVideo.muted = true;
+        liveVideo.playsInline = true;
+        liveVideo.autoplay = true;
+        liveVideo.style.display = "none";
+        (document.body || document.documentElement).appendChild(liveVideo);
+      }
+
+      liveVideo.srcObject = stream;
+
+      await new Promise<void>((resolve) => {
+        if (!liveVideo) return resolve();
+        if (liveVideo.readyState >= 2) return resolve();
+        liveVideo.onloadeddata = () => resolve();
+        setTimeout(resolve, 1500);
+      });
+
+      try {
+        await liveVideo.play();
+      } catch {
+        // ignore
+      }
+
+      console.log("[Video Pedal] Hardware camera re-acquired (LED on)");
+      return true;
+    } catch (err) {
+      console.error("[Video Pedal] Failed to re-acquire camera:", err);
+      return false;
+    } finally {
+      isAcquiringCamera = false;
+    }
+  }
+
+  async function ensureCameraAcquired(): Promise<boolean> {
+    if (
+      currentRawVideoTrack &&
+      currentRawVideoTrack.readyState === "live" &&
+      liveVideo &&
+      liveVideo.readyState >= 2
+    ) {
+      return true;
+    }
+    return await acquireHardwareCamera();
+  }
+
+  async function startRecording(): Promise<void> {
     // Clear dissolve if any
     dissolveFramesRemaining = 0;
+
+    if (!currentRawVideoTrack || currentRawVideoTrack.readyState !== "live") {
+      const ok = await ensureCameraAcquired();
+      if (!ok) {
+        console.warn("[Video Pedal] Cannot record: Camera hardware unavailable");
+        return;
+      }
+    }
 
     // Clear previous recordings
     for (const b of recordedBitmaps) b.close();
@@ -59,7 +210,7 @@
     console.log("[Video Pedal] REC: Recording camera frames");
   }
 
-  function stopRecordingAndLoop() {
+  function stopRecordingAndLoop(): void {
     if (!isRecording) return;
     isRecording = false;
 
@@ -78,6 +229,9 @@
       console.log(
         `[Video Pedal] LOOP: Playing ${recordedBitmaps.length} frames (${(recordedBitmaps.length / fps).toFixed(1)}s loop) with seamless crossfade`,
       );
+
+      // Release hardware camera to turn off camera LED and conserve resources
+      releaseHardwareCamera();
     } else {
       for (const b of recordBuffer) b.close();
       recordBuffer = [];
@@ -86,7 +240,7 @@
     }
   }
 
-  function goLive() {
+  async function goLive(): Promise<void> {
     if (currentState === "LIVE") return;
 
     if (currentState === "RECORDING") {
@@ -98,21 +252,32 @@
       return;
     }
 
-    if (currentState === "LOOPING" && crossfadeSeconds > 0 && recordedBitmaps.length > 0) {
-      // Start dissolve transition over crossfade duration
-      totalDissolveFrames = Math.max(1, Math.floor(crossfadeSeconds * fps));
-      dissolveFramesRemaining = totalDissolveFrames;
-      console.log(
-        `[Video Pedal] Dissolving loop into live feed over ${crossfadeSeconds}s (${totalDissolveFrames} frames)`,
-      );
-      return;
-    }
+    if (currentState === "LOOPING") {
+      if (isAcquiringCamera) return;
 
-    // Direct cut to LIVE
-    finishGoLive();
+      // Re-acquire camera hardware while loop continues running seamlessly
+      const ok = await acquireHardwareCamera();
+      if (!ok) {
+        console.error("[Video Pedal] Could not re-acquire camera to return live");
+        return;
+      }
+
+      if (crossfadeSeconds > 0 && recordedBitmaps.length > 0) {
+        // Start dissolve transition over crossfade duration
+        totalDissolveFrames = Math.max(1, Math.floor(crossfadeSeconds * fps));
+        dissolveFramesRemaining = totalDissolveFrames;
+        console.log(
+          `[Video Pedal] Dissolving loop into live feed over ${crossfadeSeconds}s (${totalDissolveFrames} frames)`,
+        );
+        return;
+      }
+
+      // Direct cut to LIVE
+      finishGoLive();
+    }
   }
 
-  function finishGoLive() {
+  function finishGoLive(): void {
     dissolveFramesRemaining = 0;
     for (const b of recordedBitmaps) b.close();
     for (const b of recordBuffer) b.close();
@@ -123,13 +288,13 @@
     console.log("[Video Pedal] LIVE: Stream is live");
   }
 
-  function toggleRecord() {
+  function toggleRecord(): void {
     if (currentState === "LIVE") {
-      startRecording();
+      void startRecording();
     } else if (currentState === "RECORDING") {
       stopRecordingAndLoop();
     } else if (currentState === "LOOPING") {
-      startRecording();
+      void startRecording();
     }
   }
 
@@ -153,14 +318,14 @@
     if ((e.code === "AltRight" || e.key === "AltGraph") && !altRightPressed) {
       altRightPressed = true;
       e.preventDefault();
-      startRecording();
+      void startRecording();
     } else if (e.code === "MetaRight" || e.code === "OSRight") {
       e.preventDefault();
-      goLive();
+      void goLive();
     } else if (e.key === "r" || e.key === "R") {
       toggleRecord();
     } else if (e.key === "l" || e.key === "L") {
-      goLive();
+      void goLive();
     }
   });
 
@@ -183,11 +348,11 @@
     if (type === "PEDAL_TOGGLE_RECORD") {
       toggleRecord();
     } else if (type === "PEDAL_START_RECORD") {
-      startRecording();
+      void startRecording();
     } else if (type === "PEDAL_STOP_RECORD") {
       stopRecordingAndLoop();
     } else if (type === "PEDAL_GO_LIVE") {
-      goLive();
+      void goLive();
     } else if (type === "PEDAL_GET_STATE") {
       broadcastState(currentState);
     } else if (type === "PEDAL_UPDATE_SETTINGS" && payload) {
@@ -217,6 +382,23 @@
       return rawStream;
     }
 
+    // Stop any existing active raw tracks before starting new stream
+    for (const t of allActiveVideoTracks) {
+      try {
+        t.stop();
+        t.enabled = false;
+      } catch {}
+    }
+    allActiveVideoTracks.clear();
+
+    savedConstraints = constraints;
+    currentRawStream = rawStream;
+    currentRawVideoTrack = rawVideoTracks[0];
+    for (const t of rawVideoTracks) {
+      allActiveVideoTracks.add(t);
+    }
+    isIntentionalCameraStandby = false;
+
     const rawVideoTrack = rawVideoTracks[0];
     const trackSettings = rawVideoTrack.getSettings();
     const width = trackSettings.width || 1280;
@@ -228,7 +410,10 @@
     if (liveVideo) {
       liveVideo.pause();
       liveVideo.srcObject = null;
-      liveVideo.remove();
+      liveVideo.removeAttribute("src");
+      liveVideo.load();
+      if (liveVideo.parentNode) liveVideo.parentNode.removeChild(liveVideo);
+      liveVideo = null;
     }
 
     liveVideo = document.createElement("video");
@@ -264,15 +449,27 @@
 
     // Obtain synthetic MediaStream from the canvas
     const canvasStream = compositorCanvas.captureStream(fps);
-    const syntheticVideoTrack = canvasStream.getVideoTracks()[0];
+    syntheticVideoTrack = canvasStream.getVideoTracks()[0];
 
-    // Delegate track enable/disable and constraints to raw track
-    syntheticVideoTrack.applyConstraints = (c) => rawVideoTrack.applyConstraints(c);
+    // Delegate track enable/disable and constraints to raw track safely
+    syntheticVideoTrack.applyConstraints = async (c) => {
+      savedConstraints = { ...savedConstraints, ...c };
+      if (currentRawVideoTrack && currentRawVideoTrack.readyState === "live") {
+        return currentRawVideoTrack.applyConstraints(c);
+      }
+      return Promise.resolve();
+    };
 
     // Handle track lifecycle
     rawVideoTrack.addEventListener("ended", () => {
-      syntheticVideoTrack.stop();
+      if (isIntentionalCameraStandby) return;
+      syntheticVideoTrack?.stop();
       if (animFrameId) cancelAnimationFrame(animFrameId);
+    });
+
+    syntheticVideoTrack.addEventListener("ended", () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      releaseHardwareCamera();
     });
 
     const maxFrames = Math.max(10, Math.floor(maxRecordingSeconds * fps));
@@ -280,7 +477,7 @@
     function renderLoop(timestamp: number) {
       animFrameId = requestAnimationFrame(renderLoop);
 
-      if (!compositorCtx || !compositorCanvas || !liveVideo) return;
+      if (!compositorCtx || !compositorCanvas) return;
 
       const delta = timestamp - lastFrameTime;
       const targetInterval = 1000 / fps;
@@ -301,7 +498,7 @@
         }
 
         // Dissolve live frame on top
-        if (liveVideo.readyState >= 2) {
+        if (liveVideo && liveVideo.readyState >= 2) {
           const liveAlpha = (totalDissolveFrames - dissolveFramesRemaining + 1) / (totalDissolveFrames + 1);
           compositorCtx.globalAlpha = Math.min(1, Math.max(0, liveAlpha));
           compositorCtx.drawImage(liveVideo, 0, 0, w, h);
@@ -345,7 +542,7 @@
         loopPlaybackIndex = (loopPlaybackIndex + 1) % n;
       } else {
         // LIVE or RECORDING: render camera
-        if (liveVideo.readyState >= 2) {
+        if (liveVideo && liveVideo.readyState >= 2) {
           compositorCtx.globalAlpha = 1.0;
           compositorCtx.drawImage(liveVideo, 0, 0, w, h);
 

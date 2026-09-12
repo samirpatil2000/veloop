@@ -14,7 +14,7 @@ function updateUI(st: string | null) {
     state.textContent = "LOOP";
     (state as HTMLElement).style.color = "#55ff55";
     record.textContent = "Record New Loop";
-    if (statusEl) statusEl.textContent = "Looping";
+    if (statusEl) statusEl.textContent = "Looping (Camera Off)";
   } else {
     state.textContent = "LIVE";
     (state as HTMLElement).style.color = "";

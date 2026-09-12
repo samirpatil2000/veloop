@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     setTimeout(() => {
       window.removeEventListener("message", handler);
       sendResponse({ state: null });
-    }, 600);
+    }, 3000);
     return true; // Keep channel open for async response
   }
 });
