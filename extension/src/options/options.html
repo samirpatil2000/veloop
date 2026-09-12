@@ -1,39 +1,139 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Video Pedal Settings</title>
-    <style>
-      body { max-width: 680px; margin: 40px auto; padding: 0 20px; font: 15px/1.5 system-ui; }
-      label { display: block; margin: 18px 0; }
-      input { display: block; margin-top: 6px; padding: 8px; width: 180px; }
-      button { padding: 10px 16px; }
-      .note { color: #666; }
-    </style>
+    <link rel="stylesheet" href="options.css">
   </head>
   <body>
-    <h1>Video Pedal</h1>
-    <p class="note">These settings are local. Browser/site support is still experimental.</p>
+    <div class="container">
+      <header>
+        <div class="brand">
+          <div class="logo-icon">VP</div>
+          <div>
+            <h1>Video Pedal Settings</h1>
+            <p class="subtitle">Fine-tune recording durations, crossfade blending, and hardware pedal controls.</p>
+          </div>
+        </div>
+      </header>
 
-    <label>Maximum recording (seconds)
-      <input id="maxRecordingSeconds" type="number" min="1" max="300" step="1">
-    </label>
+      <!-- Timing & Recording -->
+      <div class="section-title">Timing & Loop Length</div>
 
-    <label>Minimum recording (seconds)
-      <input id="minRecordingSeconds" type="number" min="0.1" max="30" step="0.1">
-    </label>
+      <div class="card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Maximum recording duration</div>
+            <div class="setting-desc">Caps loop length when holding down the pedal. Auto-loops if exceeded.</div>
+          </div>
+          <div class="control-group">
+            <input id="maxRecordingSeconds_range" type="range" min="1" max="120" step="1">
+            <div class="number-badge">
+              <input id="maxRecordingSeconds" type="number" min="1" max="120" step="1">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <label>Crossfade (seconds)
-      <input id="crossfadeSeconds" type="number" min="0" max="5" step="0.1">
-    </label>
+      <div class="card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Minimum recording threshold</div>
+            <div class="setting-desc">Taps shorter than this are discarded to prevent accidental pedal triggers.</div>
+          </div>
+          <div class="control-group">
+            <input id="minRecordingSeconds_range" type="range" min="0.1" max="5.0" step="0.1">
+            <div class="number-badge">
+              <input id="minRecordingSeconds" type="number" min="0.1" max="5.0" step="0.1">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <label>Overlay opacity
-      <input id="overlayOpacity" type="number" min="0" max="1" step="0.05">
-    </label>
+      <!-- Transitions & Compositor -->
+      <div class="section-title">Transitions & Seam Blending</div>
 
-    <button id="save">Save</button>
-    <span id="saved"></span>
+      <div class="card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Crossfade dissolve time</div>
+            <div class="setting-desc">Smooth transition duration between live camera and loop/preset seams.</div>
+          </div>
+          <div class="control-group">
+            <input id="crossfadeSeconds_range" type="range" min="0" max="3.0" step="0.1">
+            <div class="number-badge">
+              <input id="crossfadeSeconds" type="number" min="0" max="3.0" step="0.1">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Overlay preview opacity</div>
+            <div class="setting-desc">Ghosting opacity used when previewing or aligning framing.</div>
+          </div>
+          <div class="control-group">
+            <input id="overlayOpacity_range" type="range" min="0" max="1" step="0.05">
+            <div class="number-badge">
+              <input id="overlayOpacity" type="number" min="0" max="1" step="0.05">
+              <span class="unit">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hardware Controls -->
+      <div class="section-title">Hardware Pedal & Keyboard Controls</div>
+
+      <div class="card shortcuts-card">
+        <div class="shortcut-item">
+          <span class="shortcut-label">Pedal Down / Up (Record & Loop)</span>
+          <div class="key-combo">
+            <kbd>Right Option / Alt</kbd>
+          </div>
+        </div>
+        <div class="shortcut-item">
+          <span class="shortcut-label">Return to Live Camera</span>
+          <div class="key-combo">
+            <kbd>Right Command</kbd>
+            <kbd>L</kbd>
+          </div>
+        </div>
+        <div class="shortcut-item">
+          <span class="shortcut-label">Toggle Record (Start / Stop)</span>
+          <div class="key-combo">
+            <kbd>R</kbd>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preset Library Status -->
+      <div class="section-title">Presets & Storage</div>
+
+      <div class="card">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Saved Preset Clips</div>
+            <div class="setting-desc">Stored locally in high-performance browser IndexedDB.</div>
+          </div>
+          <div class="health-stat">
+            <strong id="presetsCount">0</strong> presets saved
+          </div>
+        </div>
+      </div>
+
+      <!-- Explicit Save Action Bar -->
+      <div class="action-bar">
+        <button id="save" class="save-btn">Save Changes</button>
+        <span id="saved" class="save-status">✓ Settings saved</span>
+      </div>
+    </div>
 
     <script src="options.js"></script>
   </body>

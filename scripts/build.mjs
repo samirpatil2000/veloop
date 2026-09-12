@@ -18,6 +18,7 @@ const bundles = {
   "extension/src/popup/popup.css": "popup.css",
   "extension/src/popup/popup.ts": "popup.js",
   "extension/src/options/options.html": "options.html",
+  "extension/src/options/options.css": "options.css",
   "extension/src/options/options.ts": "options.js"
 };
 
