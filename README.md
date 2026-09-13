@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?style=for-the-badge&logo=google-chrome" alt="Chrome MV3">
+  <a href="https://chromewebstore.google.com/detail/veloop/apbjpdbilidhpdpfhdhljcnmcjoddpdc"><img src="https://img.shields.io/badge/Chrome_Web_Store-Available-4285F4?style=for-the-badge&logo=google-chrome" alt="Chrome Web Store"></a>
   <img src="https://img.shields.io/badge/WebRTC-Native-06b6d4?style=for-the-badge" alt="WebRTC">
   <img src="https://img.shields.io/badge/Privacy-100%25_Local-brightgreen?style=for-the-badge" alt="Privacy">
   <img src="https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge" alt="MIT License">
@@ -38,9 +38,19 @@
 
 ### 📥 Installation
 
-#### Chrome Web Store
-> **Status:** Pending Review on Chrome Web Store  
-> *Store link will be available upon Google review approval.*
+#### Chrome Web Store (Recommended)
+
+Install Veloop with one click from the official Chrome Web Store:
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/veloop/apbjpdbilidhpdpfhdhljcnmcjoddpdc">
+    <img src="https://img.shields.io/badge/Chrome_Web_Store-Add_to_Chrome-4285F4?style=for-the-badge&logo=google-chrome" alt="Add to Chrome">
+  </a>
+</p>
+
+👉 **[Get Veloop on the Chrome Web Store](https://chromewebstore.google.com/detail/veloop/apbjpdbilidhpdpfhdhljcnmcjoddpdc)**
+
+---
 
 #### Developer Mode (Local Install)
 
