@@ -234,6 +234,36 @@ button.secondary:hover { background: #333; }
 }
 .empty-msg.hidden { display: none; }
 
-footer { margin-top: 14px; text-align: center; }
-a { color: #888; text-decoration: none; font-size: 12px; }
-a:hover { color: #ccc; }
+footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #1e1e24;
+  text-align: center;
+  font-size: 11px;
+  color: #71717a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+footer a {
+  color: #888892;
+  text-decoration: none;
+  font-size: 11px;
+  transition: color 0.15s ease;
+}
+footer a:hover {
+  color: #f4f4f5;
+}
+.footer-sep {
+  color: #3f3f46;
+  font-size: 9px;
+}
+.developer-credit {
+  color: #71717a;
+  font-size: 11px;
+}
+.developer-credit:hover {
+  color: #4ade80;
+}
+

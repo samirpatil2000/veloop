@@ -2,6 +2,12 @@
   "name": "veloop",
   "description": "Instant video soundboard & loop pedal for Google Meet, Zoom, and WebRTC calls.",
   "version": "0.1.1",
+  "author": "Samir Patil",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samirpatil2000/veloop.git"
+  },
+  "homepage": "https://chromewebstore.google.com/detail/veloop/apbjpdbilidhpdpfhdhljcnmcjoddpdc",
   "private": true,
   "type": "module",
   "scripts": {
