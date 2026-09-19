@@ -31,12 +31,10 @@
 
 ### 📺 Demo Video
 
+https://github.com/user-attachments/assets/e7c2297b-3fb2-44b7-981f-556eb217ce9d
+
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc" target="_blank">
-    <img src="https://img.youtube.com/vi/ej5xNg_rFyc/maxresdefault.jpg" alt="Veloop Demo Video" width="700">
-  </a>
-  <br>
-  <em>▶️ <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc">Watch Veloop in action on YouTube</a> — Looping webcam feed during a live video call</em>
+  <em>▶️ <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc">Also on YouTube</a> — Looping webcam feed during a live video call</em>
 </p>
 
 ---
