@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/veloop/apbjpdbilidhpdpfhdhljcnmcjoddpdc"><img src="https://img.shields.io/badge/Chrome_Web_Store-Available-4285F4?style=for-the-badge&logo=google-chrome" alt="Chrome Web Store"></a>
+  <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc"><img src="https://img.shields.io/badge/YouTube-Demo_Video-FF0000?style=for-the-badge&logo=youtube" alt="YouTube Demo"></a>
   <img src="https://img.shields.io/badge/WebRTC-Native-06b6d4?style=for-the-badge" alt="WebRTC">
   <img src="https://img.shields.io/badge/Privacy-100%25_Local-brightgreen?style=for-the-badge" alt="Privacy">
   <img src="https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge" alt="MIT License">
@@ -25,6 +26,18 @@
 - **Seamless Seam Dissolves** — Crossfade transitions ensure loops and returning-to-live blend smoothly without harsh visual cuts or freezing frames.
 - **100% Private & Local** — No external servers, no cloud uploads, zero telemetry. All video encoding (`MediaRecorder` WebM) and storage run entirely inside local browser `IndexedDB`.
 - **Zero Virtual Camera Drivers** — Operates natively inside Chrome via browser `canvas.captureStream()` and `getUserMedia` interception without needing OBS or system-level kernel extensions.
+
+---
+
+### 📺 Demo Video
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc" target="_blank">
+    <img src="https://img.youtube.com/vi/ej5xNg_rFyc/maxresdefault.jpg" alt="Veloop Demo Video" width="700">
+  </a>
+  <br>
+  <em>▶️ <a href="https://www.youtube.com/watch?v=ej5xNg_rFyc">Watch Veloop in action on YouTube</a> — Looping webcam feed during a live video call</em>
+</p>
 
 ---
 
