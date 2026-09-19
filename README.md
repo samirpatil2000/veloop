@@ -91,6 +91,8 @@ Veloop turns your browser into a digital video loop pedal. It intercepts `naviga
 4. **Preset Soundboard**: In the popup, name any active loop to store it permanently in `IndexedDB`. Whenever you are in a call, 1-tap any card on your soundboard to replay that clip seamlessly.
 5. **Seamless Dissolve to Live**: Hitting <kbd>Right Command</kbd> or <kbd>L</kbd> re-acquires the physical camera in the background and executes an alpha-blended crossfade back to reality.
 
+> 📖 *For complete architecture diagrams, WebRTC interception details, and pipeline specifications, see [TECH_DOC.md](TECH_DOC.md).*
+
 ---
 
 ## ⌨️ Hardware & Keyboard Controls
@@ -126,41 +128,6 @@ Configure recording durations, trigger thresholds, and transition times via **Op
 | **Overlay Opacity** | `50%` | `0%` – `100%` | Ghosting preview opacity for camera alignment. |
 
 ---
-
-## 📁 Project Structure
-
-```
-veloop/
-├── manifest.json              # Chrome Manifest V3 configuration & permissions
-├── package.json               # Project dependencies & build scripts
-├── extension/
-│   ├── icons/                 # Official extension branding (16, 32, 48, 128px PNG)
-│   └── src/
-│       ├── background/
-│       │   └── service-worker.ts  # Extension lifecycle & tab message routing
-│       ├── content/
-│       │   └── bridge.ts          # Isolated world <-> Main world communication relay
-│       ├── page/
-│       │   └── page-bridge.ts     # WebRTC getUserMedia interceptor & canvas compositor
-│       ├── core/
-│       │   ├── clip-store.ts      # IndexedDB storage manager for saved video presets
-│       │   ├── loop-buffer.ts     # Bounded in-memory frame buffer
-│       │   ├── state-machine.ts   # Deterministic pedal state machine
-│       │   └── types.ts           # Shared TypeScript interfaces & types
-│       ├── popup/
-│       │   ├── popup.html         # Soundboard preset board UI
-│       │   ├── popup.css          # Sleek obsidian tactile styles
-│       │   └── popup.ts           # Preset playback & save controller
-│       └── options/
-│           ├── options.html       # Studio dark-mode settings panel
-│           ├── options.css        # Studio preferences styling & dual sliders
-│           └── options.ts         # Settings sync & persistence
-├── store-assets/              # Chrome Web Store promotional images (1280x800, 440x280)
-├── scripts/
-│   ├── build.mjs              # Esbuild bundler & zip packager
-│   └── generate-assets.py     # Python vector asset & promo image generator
-└── tests/                     # Vitest unit tests (state-machine, buffer, clip-store)
-```
 
 ---
 
