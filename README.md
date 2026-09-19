@@ -113,6 +113,20 @@ Veloop turns your browser into a digital video loop pedal. It intercepts `naviga
 
 ---
 
+## ⏱️ Video Durations & Timing Limits
+
+Configure recording durations, trigger thresholds, and transition times via **Options** (`chrome-extension://<id>/options.html`):
+
+| Setting | Default | Configurable Range | Description |
+|---|---|---|---|
+| **Maximum Loop Duration** | `30s` | `1s` – `120s` (2 min) | Caps how long a loop can be. Auto-loops immediately if the limit is reached. |
+| **Minimum Recording Threshold** | `1.0s` | `0.1s` – `5.0s` | Discards brief accidental pedal taps below this duration. |
+| **Crossfade Dissolve Time** | `0.5s` | `0.0s` – `3.0s` | Smooth alpha transition duration when switching between loop and live camera. |
+| **Playback Frame Rate** | `30 FPS` | Fixed | Native frame rate for seamless WebRTC streaming on Google Meet, Zoom, etc. |
+| **Overlay Opacity** | `50%` | `0%` – `100%` | Ghosting preview opacity for camera alignment. |
+
+---
+
 ## 📁 Project Structure
 
 ```
