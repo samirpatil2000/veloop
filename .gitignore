@@ -3,3 +3,5 @@ dist/
 .DS_Store
 *.log
 REDDIT_LAUNCH.md
+*.crx
+*.pem
